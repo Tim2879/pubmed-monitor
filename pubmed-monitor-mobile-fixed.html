@@ -1,0 +1,989 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#667eea">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="PubMed Monitor">
+    <title>PubMed Auto Monitor</title>
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 0;
+        }
+
+        /* 헤더 */
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px 15px;
+            text-align: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+        }
+
+        .header h1 {
+            font-size: 1.5rem;
+            margin-bottom: 5px;
+        }
+
+        .header p {
+            font-size: 0.85rem;
+            opacity: 0.9;
+        }
+
+        /* 탭 네비게이션 */
+        .tabs {
+            display: flex;
+            background: white;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        .tab {
+            flex: 1;
+            padding: 15px 10px;
+            border: none;
+            background: none;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: #666;
+            border-bottom: 3px solid transparent;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .tab.active {
+            color: #667eea;
+            border-bottom-color: #667eea;
+        }
+
+        /* 탭 컨텐츠 */
+        .tab-content {
+            display: none;
+            padding: 15px;
+            padding-bottom: 80px;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* 카드 */
+        .card {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            margin-bottom: 15px;
+        }
+
+        .card-title {
+            font-size: 1.1rem;
+            font-weight: 700;
+            margin-bottom: 15px;
+            color: #333;
+        }
+
+        /* 입력 */
+        input[type="text"],
+        input[type="password"],
+        input[type="number"],
+        select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 1rem;
+            margin-bottom: 10px;
+        }
+
+        /* 버튼 */
+        .btn {
+            width: 100%;
+            padding: 14px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-success {
+            background: #4CAF50;
+            color: white;
+        }
+
+        .btn-danger {
+            background: #f44336;
+            color: white;
+        }
+
+        .btn-small {
+            padding: 8px 12px;
+            font-size: 0.85rem;
+            width: auto;
+            display: inline-block;
+        }
+
+        /* 통계 */
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 12px;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 700;
+        }
+
+        .stat-label {
+            font-size: 0.85rem;
+            opacity: 0.9;
+            margin-top: 5px;
+        }
+
+        /* 키워드 */
+        .keyword-item {
+            background: #f5f5f5;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 10px;
+            border-left: 4px solid #667eea;
+        }
+
+        .keyword-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .keyword-name {
+            font-weight: 600;
+            font-size: 1rem;
+        }
+
+        .keyword-actions {
+            display: flex;
+            gap: 5px;
+        }
+
+        .keyword-meta {
+            font-size: 0.85rem;
+            color: #666;
+        }
+
+        /* 논문 카드 */
+        .paper {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            margin-bottom: 15px;
+            position: relative;
+        }
+
+        .paper.new {
+            border-left: 5px solid #ff5722;
+        }
+
+        .new-badge {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            background: #ff5722;
+            color: white;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 0.7rem;
+            font-weight: 700;
+        }
+
+        .paper-tag {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            display: inline-block;
+            margin-bottom: 10px;
+        }
+
+        .paper-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 10px;
+            line-height: 1.4;
+        }
+
+        .paper-authors {
+            color: #666;
+            font-size: 0.9rem;
+            margin-bottom: 10px;
+        }
+
+        .paper-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 12px;
+            font-size: 0.8rem;
+            color: #888;
+        }
+
+        .paper-abstract {
+            background: #f9f9f9;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 12px;
+            font-size: 0.9rem;
+            color: #555;
+            line-height: 1.6;
+            max-height: 150px;
+            overflow-y: auto;
+        }
+
+        .summary {
+            background: linear-gradient(135deg, #e8f5e9 0%, #f1f8e9 100%);
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 12px;
+            border-left: 4px solid #4CAF50;
+        }
+
+        .summary-title {
+            font-weight: 600;
+            color: #2e7d32;
+            margin-bottom: 10px;
+            font-size: 0.95rem;
+        }
+
+        .summary-content {
+            color: #333;
+            line-height: 1.6;
+            font-size: 0.9rem;
+            white-space: pre-wrap;
+        }
+
+        .paper-actions {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
+        }
+
+        /* 알림 */
+        .notification {
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 12px;
+            border-left: 4px solid #2196F3;
+        }
+
+        .notification.unread {
+            background: #e3f2fd;
+            border-left-color: #ff5722;
+        }
+
+        /* 토글 스위치 */
+        .toggle {
+            position: relative;
+            width: 55px;
+            height: 30px;
+            background: #ccc;
+            border-radius: 15px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .toggle.active {
+            background: #4CAF50;
+        }
+
+        .toggle::after {
+            content: '';
+            position: absolute;
+            width: 26px;
+            height: 26px;
+            border-radius: 50%;
+            background: white;
+            top: 2px;
+            left: 2px;
+            transition: left 0.3s;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .toggle.active::after {
+            left: 27px;
+        }
+
+        .setting-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        /* 로딩 */
+        .loading {
+            text-align: center;
+            padding: 40px 20px;
+        }
+
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* 빈 상태 */
+        .empty {
+            text-align: center;
+            padding: 60px 20px;
+            color: #999;
+        }
+
+        .empty-icon {
+            font-size: 3rem;
+            margin-bottom: 15px;
+            opacity: 0.5;
+        }
+
+        /* 경고 */
+        .alert {
+            background: #fff3cd;
+            color: #856404;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            border-left: 4px solid #ffc107;
+        }
+
+        /* 하단 액션 바 */
+        .bottom-bar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: white;
+            padding: 15px;
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+            display: flex;
+            gap: 10px;
+            z-index: 99;
+        }
+
+        .bottom-bar .btn {
+            flex: 1;
+        }
+
+        /* 반응형 */
+        @media (min-width: 768px) {
+            .tab-content {
+                max-width: 800px;
+                margin: 0 auto;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🔬 PubMed Monitor</h1>
+        <p>논문 자동 모니터링 & AI 요약</p>
+    </div>
+
+    <div class="tabs">
+        <button class="tab active" onclick="switchTab(0)">📰 논문</button>
+        <button class="tab" onclick="switchTab(1)">🔑 키워드</button>
+        <button class="tab" onclick="switchTab(2)">🔔 알림</button>
+        <button class="tab" onclick="switchTab(3)">⚙️ 설정</button>
+    </div>
+
+    <!-- 논문 탭 -->
+    <div class="tab-content active">
+        <div class="stats">
+            <div class="stat-card">
+                <div class="stat-value" id="newCount">0</div>
+                <div class="stat-label">새 논문</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="totalCount">0</div>
+                <div class="stat-label">전체</div>
+            </div>
+        </div>
+
+        <div id="papers"></div>
+
+        <div class="bottom-bar">
+            <button class="btn btn-primary" onclick="refreshAll()">🔄 새로고침</button>
+            <button class="btn btn-success" onclick="markAllRead()">✓ 모두 읽음</button>
+        </div>
+    </div>
+
+    <!-- 키워드 탭 -->
+    <div class="tab-content">
+        <div class="card">
+            <div class="card-title">➕ 키워드 추가</div>
+            <input type="text" id="keywordInput" placeholder="예: AI radiology">
+            <button class="btn btn-primary" onclick="addKeyword()">추가</button>
+        </div>
+
+        <div class="card">
+            <div class="card-title">📋 내 키워드</div>
+            <div id="keywords"></div>
+        </div>
+    </div>
+
+    <!-- 알림 탭 -->
+    <div class="tab-content">
+        <div class="card">
+            <div id="notifications"></div>
+        </div>
+    </div>
+
+    <!-- 설정 탭 -->
+    <div class="tab-content">
+        <div class="card">
+            <div class="alert">
+                <strong>🔑 Claude API Key</strong>
+                <p style="font-size: 0.85rem; margin-top: 5px;">AI 요약을 위해 필요합니다</p>
+                <input type="password" id="apiKey" placeholder="sk-ant-api03-..." style="margin-top: 10px;">
+                <button class="btn btn-success" onclick="saveApiKey()">저장</button>
+                <div id="apiStatus" style="margin-top: 10px;"></div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-title">🔄 자동 모니터링</div>
+            <div class="setting-row">
+                <span>자동 확인</span>
+                <div class="toggle" id="autoToggle" onclick="toggleAuto()"></div>
+            </div>
+            <div class="setting-row">
+                <span>확인 주기</span>
+                <select id="interval">
+                    <option value="5">5분</option>
+                    <option value="10">10분</option>
+                    <option value="30" selected>30분</option>
+                    <option value="60">1시간</option>
+                </select>
+            </div>
+            <div class="setting-row">
+                <span>검색 기간</span>
+                <select id="period">
+                    <option value="1">1일</option>
+                    <option value="3">3일</option>
+                    <option value="7" selected>7일</option>
+                    <option value="30">30일</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="card">
+            <button class="btn btn-danger" onclick="clearAll()">🗑 모든 데이터 삭제</button>
+        </div>
+    </div>
+
+    <script>
+        // 전역 상태
+        let state = {
+            apiKey: localStorage.getItem('api_key') || '',
+            keywords: JSON.parse(localStorage.getItem('keywords') || '[]'),
+            papers: JSON.parse(localStorage.getItem('papers') || '[]'),
+            notifications: JSON.parse(localStorage.getItem('notifications') || '[]'),
+            autoMonitor: localStorage.getItem('auto_monitor') === 'true',
+            intervalId: null
+        };
+
+        // 초기화
+        document.addEventListener('DOMContentLoaded', () => {
+            updateUI();
+            if (state.apiKey) {
+                document.getElementById('apiKey').value = state.apiKey;
+            }
+            if (state.autoMonitor) {
+                document.getElementById('autoToggle').classList.add('active');
+                startAutoMonitor();
+            }
+        });
+
+        // 탭 전환
+        function switchTab(index) {
+            const tabs = document.querySelectorAll('.tab');
+            const contents = document.querySelectorAll('.tab-content');
+            
+            tabs.forEach((tab, i) => {
+                tab.classList.toggle('active', i === index);
+            });
+            
+            contents.forEach((content, i) => {
+                content.classList.toggle('active', i === index);
+            });
+        }
+
+        // API 키 저장
+        function saveApiKey() {
+            const key = document.getElementById('apiKey').value.trim();
+            if (!key || !key.startsWith('sk-ant-')) {
+                alert('⚠️ 유효한 Anthropic API 키를 입력하세요');
+                return;
+            }
+            state.apiKey = key;
+            localStorage.setItem('api_key', key);
+            document.getElementById('apiStatus').innerHTML = '<div style="background:#d4edda;color:#155724;padding:10px;border-radius:6px;margin-top:10px;">✓ 저장 완료</div>';
+            addNotification('API 키가 저장되었습니다', 'success');
+        }
+
+        // 키워드 추가
+        function addKeyword() {
+            const input = document.getElementById('keywordInput');
+            const keyword = input.value.trim();
+            
+            if (!keyword) {
+                alert('키워드를 입력하세요');
+                return;
+            }
+            
+            if (state.keywords.find(k => k.name === keyword)) {
+                alert('이미 등록된 키워드입니다');
+                return;
+            }
+            
+            state.keywords.push({
+                id: Date.now(),
+                name: keyword,
+                active: true,
+                count: 0
+            });
+            
+            save();
+            input.value = '';
+            updateUI();
+            addNotification(`키워드 추가: "${keyword}"`, 'info');
+            searchKeyword(state.keywords[state.keywords.length - 1]);
+        }
+
+        // 키워드 검색
+        async function searchKeyword(keyword) {
+            try {
+                const period = document.getElementById('period').value;
+                const url = `https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=pubmed&term=${encodeURIComponent(keyword.name)}&retmax=10&retmode=json&sort=pub_date&reldate=${period}`;
+                
+                const res = await fetch(url);
+                const data = await res.json();
+                
+                if (!data.esearchresult?.idlist?.length) {
+                    addNotification(`"${keyword.name}": 새 논문 없음`, 'info');
+                    return;
+                }
+                
+                const pmids = data.esearchresult.idlist;
+                const fetchUrl = `https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=pubmed&id=${pmids.join(',')}&retmode=xml`;
+                
+                const xmlRes = await fetch(fetchUrl);
+                const xmlText = await xmlRes.text();
+                const parser = new DOMParser();
+                const xml = parser.parseFromString(xmlText, 'text/xml');
+                const articles = xml.getElementsByTagName('PubmedArticle');
+                
+                let newCount = 0;
+                for (let article of articles) {
+                    const paper = parseArticle(article);
+                    paper.keywordId = keyword.id;
+                    paper.keywordName = keyword.name;
+                    paper.isNew = true;
+                    paper.isRead = false;
+                    
+                    if (!state.papers.find(p => p.pmid === paper.pmid)) {
+                        state.papers.unshift(paper);
+                        newCount++;
+                    }
+                }
+                
+                keyword.count = state.papers.filter(p => p.keywordId === keyword.id).length;
+                save();
+                updateUI();
+                
+                if (newCount > 0) {
+                    addNotification(`"${keyword.name}": 새 논문 ${newCount}개`, 'success');
+                    
+                    if ('Notification' in window && Notification.permission === 'granted') {
+                        new Notification('🔬 새 논문 발견!', {
+                            body: `"${keyword.name}": ${newCount}개`,
+                            vibrate: [200, 100, 200]
+                        });
+                    }
+                }
+                
+            } catch (err) {
+                console.error(err);
+                addNotification(`"${keyword.name}" 검색 실패`, 'error');
+            }
+        }
+
+        // XML 파싱
+        function parseArticle(article) {
+            const pmid = article.querySelector('PMID')?.textContent || '';
+            const title = article.querySelector('ArticleTitle')?.textContent || 'No title';
+            
+            const authors = Array.from(article.querySelectorAll('Author')).slice(0, 3).map(a => {
+                const last = a.querySelector('LastName')?.textContent || '';
+                const first = a.querySelector('ForeName')?.textContent || '';
+                return `${last} ${first}`.trim();
+            }).join(', ');
+            
+            const abstract = Array.from(article.querySelectorAll('AbstractText'))
+                .map(a => a.textContent).join(' ') || 'No abstract';
+            
+            const journal = article.querySelector('Title')?.textContent || '';
+            
+            const pubDate = article.querySelector('PubDate');
+            let date = '';
+            if (pubDate) {
+                const year = pubDate.querySelector('Year')?.textContent || '';
+                const month = pubDate.querySelector('Month')?.textContent || '';
+                date = [year, month].filter(d => d).join(' ');
+            }
+            
+            return {
+                pmid,
+                title,
+                authors: authors + (article.querySelectorAll('Author').length > 3 ? ' et al.' : ''),
+                abstract,
+                journal,
+                date,
+                url: `https://pubmed.ncbi.nlm.nih.gov/${pmid}/`,
+                summary: null,
+                foundAt: new Date().toISOString()
+            };
+        }
+
+        // AI 요약
+        async function summarize(pmid) {
+            if (!state.apiKey) {
+                alert('⚠️ 설정에서 API 키를 입력하세요');
+                switchTab(3);
+                return;
+            }
+            
+            const paper = state.papers.find(p => p.pmid === pmid);
+            if (!paper) return;
+            
+            const card = document.querySelector(`[data-pmid="${pmid}"]`);
+            const actions = card.querySelector('.paper-actions');
+            actions.innerHTML = '<div class="loading"><div class="spinner"></div>AI 분석 중...</div>';
+            
+            try {
+                const res = await fetch('https://api.anthropic.com/v1/messages', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'x-api-key': state.apiKey,
+                        'anthropic-version': '2023-06-01'
+                    },
+                    body: JSON.stringify({
+                        model: 'claude-sonnet-4-20250514',
+                        max_tokens: 1500,
+                        messages: [{
+                            role: 'user',
+                            content: `다음 논문을 한국어로 간결하게 요약하세요:\n\n제목: ${paper.title}\n초록: ${paper.abstract}\n\n형식:\n• 목적: (1-2문장)\n• 방법: (1-2문장)\n• 결과: (2-3문장)\n• 의의: (1-2문장)`
+                        }]
+                    })
+                });
+                
+                const data = await res.json();
+                paper.summary = data.content[0].text;
+                save();
+                updateUI();
+                addNotification('요약 완료', 'success');
+                
+            } catch (err) {
+                console.error(err);
+                alert('❌ 요약 실패: ' + err.message);
+                updateUI();
+            }
+        }
+
+        // 전체 새로고침
+        async function refreshAll() {
+            const active = state.keywords.filter(k => k.active);
+            if (!active.length) {
+                alert('활성화된 키워드가 없습니다');
+                return;
+            }
+            
+            for (const keyword of active) {
+                await searchKeyword(keyword);
+                await new Promise(r => setTimeout(r, 1000));
+            }
+        }
+
+        // 키워드 토글
+        function toggleKeyword(id) {
+            const keyword = state.keywords.find(k => k.id === id);
+            if (keyword) {
+                keyword.active = !keyword.active;
+                save();
+                updateUI();
+            }
+        }
+
+        // 키워드 삭제
+        function deleteKeyword(id) {
+            if (!confirm('삭제하시겠습니까?')) return;
+            state.keywords = state.keywords.filter(k => k.id !== id);
+            state.papers = state.papers.filter(p => p.keywordId !== id);
+            save();
+            updateUI();
+        }
+
+        // 논문 읽음 처리
+        function markRead(pmid) {
+            const paper = state.papers.find(p => p.pmid === pmid);
+            if (paper) {
+                paper.isRead = true;
+                paper.isNew = false;
+                save();
+                updateUI();
+            }
+        }
+
+        // 모두 읽음
+        function markAllRead() {
+            state.papers.forEach(p => {
+                p.isRead = true;
+                p.isNew = false;
+            });
+            save();
+            updateUI();
+            addNotification('모두 읽음 처리 완료', 'success');
+        }
+
+        // 논문 삭제
+        function deletePaper(pmid) {
+            if (!confirm('삭제하시겠습니까?')) return;
+            state.papers = state.papers.filter(p => p.pmid !== pmid);
+            save();
+            updateUI();
+        }
+
+        // 자동 모니터링
+        function toggleAuto() {
+            state.autoMonitor = !state.autoMonitor;
+            localStorage.setItem('auto_monitor', state.autoMonitor);
+            document.getElementById('autoToggle').classList.toggle('active');
+            
+            if (state.autoMonitor) {
+                startAutoMonitor();
+                addNotification('자동 모니터링 시작', 'success');
+            } else {
+                stopAutoMonitor();
+                addNotification('자동 모니터링 중지', 'warning');
+            }
+        }
+
+        function startAutoMonitor() {
+            if (state.intervalId) return;
+            const mins = parseInt(document.getElementById('interval').value);
+            state.intervalId = setInterval(refreshAll, mins * 60 * 1000);
+        }
+
+        function stopAutoMonitor() {
+            if (state.intervalId) {
+                clearInterval(state.intervalId);
+                state.intervalId = null;
+            }
+        }
+
+        // 알림 추가
+        function addNotification(msg, type) {
+            state.notifications.unshift({
+                id: Date.now(),
+                msg,
+                type,
+                time: new Date().toISOString(),
+                read: false
+            });
+            if (state.notifications.length > 30) {
+                state.notifications = state.notifications.slice(0, 30);
+            }
+            save();
+            updateUI();
+        }
+
+        // 전체 삭제
+        function clearAll() {
+            if (!confirm('⚠️ 모든 데이터를 삭제하시겠습니까?')) return;
+            localStorage.clear();
+            location.reload();
+        }
+
+        // 저장
+        function save() {
+            localStorage.setItem('keywords', JSON.stringify(state.keywords));
+            localStorage.setItem('papers', JSON.stringify(state.papers));
+            localStorage.setItem('notifications', JSON.stringify(state.notifications));
+        }
+
+        // UI 업데이트
+        function updateUI() {
+            updateCounts();
+            renderPapers();
+            renderKeywords();
+            renderNotifications();
+        }
+
+        function updateCounts() {
+            const newCount = state.papers.filter(p => p.isNew && !p.isRead).length;
+            document.getElementById('newCount').textContent = newCount;
+            document.getElementById('totalCount').textContent = state.papers.length;
+        }
+
+        function renderPapers() {
+            const container = document.getElementById('papers');
+            
+            if (!state.papers.length) {
+                container.innerHTML = '<div class="empty"><div class="empty-icon">📄</div><p>아직 논문이 없습니다</p></div>';
+                return;
+            }
+            
+            const sorted = [...state.papers].sort((a, b) => new Date(b.foundAt) - new Date(a.foundAt));
+            
+            container.innerHTML = sorted.map(p => `
+                <div class="paper ${p.isNew && !p.isRead ? 'new' : ''}" data-pmid="${p.pmid}">
+                    ${p.isNew && !p.isRead ? '<div class="new-badge">NEW</div>' : ''}
+                    <div class="paper-tag">${p.keywordName}</div>
+                    <div class="paper-title">${p.title}</div>
+                    <div class="paper-authors">👥 ${p.authors}</div>
+                    <div class="paper-meta">
+                        <span>📰 ${p.journal}</span>
+                        <span>📅 ${p.date}</span>
+                        <span>🆔 ${p.pmid}</span>
+                    </div>
+                    <div class="paper-abstract">${p.abstract.substring(0, 300)}...</div>
+                    ${p.summary ? `
+                        <div class="summary">
+                            <div class="summary-title">🤖 AI 요약</div>
+                            <div class="summary-content">${p.summary}</div>
+                        </div>
+                    ` : ''}
+                    <div class="paper-actions">
+                        ${!p.summary ? `<button class="btn btn-success btn-small" onclick="summarize('${p.pmid}')">🤖 요약</button>` : ''}
+                        <button class="btn btn-primary btn-small" onclick="window.open('${p.url}')">🔗 보기</button>
+                        ${p.isNew && !p.isRead ? `<button class="btn btn-success btn-small" onclick="markRead('${p.pmid}')">✓ 읽음</button>` : ''}
+                        <button class="btn btn-danger btn-small" onclick="deletePaper('${p.pmid}')">🗑</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function renderKeywords() {
+            const container = document.getElementById('keywords');
+            
+            if (!state.keywords.length) {
+                container.innerHTML = '<div class="empty"><div class="empty-icon">🔍</div><p>키워드를 추가하세요</p></div>';
+                return;
+            }
+            
+            container.innerHTML = state.keywords.map(k => `
+                <div class="keyword-item">
+                    <div class="keyword-header">
+                        <div class="keyword-name">${k.name}</div>
+                        <div class="keyword-actions">
+                            <button class="btn btn-small btn-primary" onclick="searchKeyword(${JSON.stringify(k).replace(/"/g, '&quot;')})">🔄</button>
+                            <button class="btn btn-small ${k.active ? 'btn-danger' : 'btn-success'}" onclick="toggleKeyword(${k.id})">${k.active ? '⏸' : '▶'}</button>
+                            <button class="btn btn-small btn-danger" onclick="deleteKeyword(${k.id})">🗑</button>
+                        </div>
+                    </div>
+                    <div class="keyword-meta">📄 ${k.count}개 논문</div>
+                </div>
+            `).join('');
+        }
+
+        function renderNotifications() {
+            const container = document.getElementById('notifications');
+            
+            if (!state.notifications.length) {
+                container.innerHTML = '<div class="empty"><div class="empty-icon">🔔</div><p>알림이 없습니다</p></div>';
+                return;
+            }
+            
+            container.innerHTML = state.notifications.slice(0, 20).map(n => `
+                <div class="notification ${n.read ? '' : 'unread'}">
+                    <div style="display:flex;justify-content:space-between;margin-bottom:5px;">
+                        <strong>${n.type === 'success' ? '✅' : n.type === 'error' ? '❌' : 'ℹ️'} ${n.type.toUpperCase()}</strong>
+                        <span style="font-size:0.8rem;color:#999;">${formatTime(n.time)}</span>
+                    </div>
+                    <div>${n.msg}</div>
+                </div>
+            `).join('');
+        }
+
+        function formatTime(iso) {
+            const date = new Date(iso);
+            const now = new Date();
+            const diff = now - date;
+            const mins = Math.floor(diff / 60000);
+            const hours = Math.floor(diff / 3600000);
+            const days = Math.floor(diff / 86400000);
+            
+            if (mins < 1) return '방금';
+            if (mins < 60) return `${mins}분`;
+            if (hours < 24) return `${hours}시간`;
+            if (days < 7) return `${days}일`;
+            return date.toLocaleDateString('ko-KR');
+        }
+
+        // 알림 권한
+        if ('Notification' in window && Notification.permission === 'default') {
+            Notification.requestPermission();
+        }
+
+        // Enter 키
+        document.getElementById('keywordInput').addEventListener('keypress', e => {
+            if (e.key === 'Enter') addKeyword();
+        });
+    </script>
+</body>
+</html>

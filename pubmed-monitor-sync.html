@@ -1,0 +1,1267 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#667eea">
+    <title>PubMed Monitor - Cloud Sync</title>
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            text-align: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+        }
+
+        .header h1 {
+            font-size: 1.5rem;
+            margin-bottom: 5px;
+        }
+
+        .sync-status {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            font-size: 0.85rem;
+            margin-top: 10px;
+            padding: 8px 15px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 20px;
+            display: inline-flex;
+        }
+
+        .sync-indicator {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #4CAF50;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .tabs {
+            display: flex;
+            background: white;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        .tab {
+            flex: 1;
+            padding: 15px 10px;
+            border: none;
+            background: none;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: #666;
+            border-bottom: 3px solid transparent;
+            cursor: pointer;
+        }
+
+        .tab.active {
+            color: #667eea;
+            border-bottom-color: #667eea;
+        }
+
+        .tab-content {
+            display: none;
+            padding: 15px;
+            padding-bottom: 100px;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .card {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            margin-bottom: 15px;
+        }
+
+        .card-title {
+            font-size: 1.1rem;
+            font-weight: 700;
+            margin-bottom: 15px;
+            color: #333;
+        }
+
+        input[type="text"],
+        input[type="password"],
+        input[type="email"],
+        input[type="number"],
+        select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 1rem;
+            margin-bottom: 10px;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 14px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-success {
+            background: #4CAF50;
+            color: white;
+        }
+
+        .btn-danger {
+            background: #f44336;
+            color: white;
+        }
+
+        .btn-small {
+            padding: 8px 12px;
+            font-size: 0.85rem;
+            width: auto;
+            display: inline-block;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 12px;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 700;
+        }
+
+        .stat-label {
+            font-size: 0.85rem;
+            opacity: 0.9;
+            margin-top: 5px;
+        }
+
+        .alert {
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            border-left: 4px solid;
+        }
+
+        .alert-warning {
+            background: #fff3cd;
+            color: #856404;
+            border-left-color: #ffc107;
+        }
+
+        .alert-success {
+            background: #d4edda;
+            color: #155724;
+            border-left-color: #28a745;
+        }
+
+        .alert-info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border-left-color: #17a2b8;
+        }
+
+        .sync-info {
+            background: #e3f2fd;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            border-left: 4px solid #2196F3;
+        }
+
+        .device-list {
+            margin-top: 15px;
+        }
+
+        .device-item {
+            background: #f5f5f5;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .device-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .device-icon {
+            font-size: 1.5rem;
+        }
+
+        .device-name {
+            font-weight: 600;
+        }
+
+        .device-time {
+            font-size: 0.85rem;
+            color: #666;
+        }
+
+        .keyword-item {
+            background: #f5f5f5;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 10px;
+            border-left: 4px solid #667eea;
+        }
+
+        .keyword-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .keyword-name {
+            font-weight: 600;
+            font-size: 1rem;
+        }
+
+        .keyword-actions {
+            display: flex;
+            gap: 5px;
+        }
+
+        .paper {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            margin-bottom: 15px;
+            position: relative;
+        }
+
+        .paper.new {
+            border-left: 5px solid #ff5722;
+        }
+
+        .new-badge {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            background: #ff5722;
+            color: white;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 0.7rem;
+            font-weight: 700;
+        }
+
+        .paper-tag {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            display: inline-block;
+            margin-bottom: 10px;
+        }
+
+        .paper-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 10px;
+            line-height: 1.4;
+        }
+
+        .paper-actions {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
+            margin-top: 12px;
+        }
+
+        .toggle {
+            position: relative;
+            width: 55px;
+            height: 30px;
+            background: #ccc;
+            border-radius: 15px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .toggle.active {
+            background: #4CAF50;
+        }
+
+        .toggle::after {
+            content: '';
+            position: absolute;
+            width: 26px;
+            height: 26px;
+            border-radius: 50%;
+            background: white;
+            top: 2px;
+            left: 2px;
+            transition: left 0.3s;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .toggle.active::after {
+            left: 27px;
+        }
+
+        .setting-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px 20px;
+        }
+
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .empty {
+            text-align: center;
+            padding: 60px 20px;
+            color: #999;
+        }
+
+        .empty-icon {
+            font-size: 3rem;
+            margin-bottom: 15px;
+            opacity: 0.5;
+        }
+
+        .bottom-bar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: white;
+            padding: 15px;
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+            display: flex;
+            gap: 10px;
+            z-index: 99;
+        }
+
+        .bottom-bar .btn {
+            flex: 1;
+        }
+
+        @media (min-width: 768px) {
+            .tab-content {
+                max-width: 800px;
+                margin: 0 auto;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🔬 PubMed Monitor</h1>
+        <p>PC & 모바일 클라우드 동기화</p>
+        <div class="sync-status" id="syncStatus">
+            <div class="sync-indicator"></div>
+            <span>동기화 대기 중</span>
+        </div>
+    </div>
+
+    <div class="tabs">
+        <button class="tab active" onclick="switchTab(0)">📰 논문</button>
+        <button class="tab" onclick="switchTab(1)">🔑 키워드</button>
+        <button class="tab" onclick="switchTab(2)">☁️ 동기화</button>
+        <button class="tab" onclick="switchTab(3)">⚙️ 설정</button>
+    </div>
+
+    <!-- 논문 탭 -->
+    <div class="tab-content active">
+        <div class="stats">
+            <div class="stat-card">
+                <div class="stat-value" id="newCount">0</div>
+                <div class="stat-label">새 논문</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="totalCount">0</div>
+                <div class="stat-label">전체</div>
+            </div>
+        </div>
+
+        <div id="papers"></div>
+
+        <div class="bottom-bar">
+            <button class="btn btn-primary" onclick="refreshAll()">🔄 새로고침</button>
+            <button class="btn btn-success" onclick="markAllRead()">✓ 모두 읽음</button>
+        </div>
+    </div>
+
+    <!-- 키워드 탭 -->
+    <div class="tab-content">
+        <div class="card">
+            <div class="card-title">➕ 키워드 추가</div>
+            <input type="text" id="keywordInput" placeholder="예: AI radiology">
+            <button class="btn btn-primary" onclick="addKeyword()">추가</button>
+        </div>
+
+        <div class="card">
+            <div class="card-title">📋 내 키워드</div>
+            <div id="keywords"></div>
+        </div>
+    </div>
+
+    <!-- 동기화 탭 -->
+    <div class="tab-content">
+        <div class="card">
+            <div class="card-title">☁️ 클라우드 동기화</div>
+            
+            <div class="alert alert-info">
+                <strong>💡 동기화 안내</strong>
+                <p style="font-size: 0.9rem; margin-top: 5px;">
+                    동기화 키를 설정하면 PC와 모바일에서 같은 데이터를 공유할 수 있습니다.
+                </p>
+            </div>
+
+            <div id="syncSection">
+                <!-- 로그인 전 -->
+                <div id="loginForm">
+                    <label style="font-weight: 600; display: block; margin-bottom: 8px;">
+                        🔑 동기화 키 (이메일 형식)
+                    </label>
+                    <input type="email" id="syncKey" placeholder="your-email@example.com">
+                    
+                    <label style="font-weight: 600; display: block; margin-bottom: 8px; margin-top: 15px;">
+                        🔒 비밀번호 (4자리 이상)
+                    </label>
+                    <input type="password" id="syncPassword" placeholder="비밀번호 입력">
+                    
+                    <button class="btn btn-success" onclick="loginSync()" style="margin-top: 15px;">
+                        동기화 시작
+                    </button>
+                    
+                    <p style="font-size: 0.85rem; color: #666; margin-top: 10px; text-align: center;">
+                        다른 기기에서도 같은 키와 비밀번호를 입력하세요
+                    </p>
+                </div>
+
+                <!-- 로그인 후 -->
+                <div id="syncDashboard" style="display: none;">
+                    <div class="alert alert-success">
+                        <strong>✅ 동기화 활성화됨</strong>
+                        <p style="font-size: 0.9rem; margin-top: 5px;" id="syncEmail"></p>
+                    </div>
+
+                    <div class="setting-row">
+                        <span>자동 동기화</span>
+                        <div class="toggle active" id="autoSyncToggle" onclick="toggleAutoSync()"></div>
+                    </div>
+
+                    <button class="btn btn-primary" onclick="manualSync()">
+                        🔄 지금 동기화
+                    </button>
+
+                    <button class="btn btn-danger" onclick="logoutSync()" style="margin-top: 10px;">
+                        동기화 해제
+                    </button>
+
+                    <div class="device-list">
+                        <div style="font-weight: 600; margin-bottom: 10px;">📱 연결된 기기</div>
+                        <div id="deviceList"></div>
+                    </div>
+
+                    <div style="margin-top: 15px; padding: 12px; background: #f5f5f5; border-radius: 8px;">
+                        <div style="font-size: 0.85rem; color: #666;">
+                            <div>마지막 동기화: <span id="lastSync">없음</span></div>
+                            <div style="margin-top: 5px;">동기화된 항목: 
+                                <span id="syncStats">키워드 0개, 논문 0개</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-title">❓ 동기화 사용법</div>
+            <ol style="line-height: 1.8; color: #555;">
+                <li>이메일 형식의 동기화 키 입력</li>
+                <li>4자리 이상 비밀번호 설정</li>
+                <li>다른 기기에서 같은 키/비밀번호로 로그인</li>
+                <li>자동으로 데이터 동기화!</li>
+            </ol>
+        </div>
+    </div>
+
+    <!-- 설정 탭 -->
+    <div class="tab-content">
+        <div class="card">
+            <div class="alert alert-warning">
+                <strong>🔑 Claude API Key</strong>
+                <p style="font-size: 0.85rem; margin-top: 5px;">AI 요약을 위해 필요합니다</p>
+                <input type="password" id="apiKey" placeholder="sk-ant-api03-..." style="margin-top: 10px;">
+                <button class="btn btn-success" onclick="saveApiKey()">저장</button>
+                <div id="apiStatus" style="margin-top: 10px;"></div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-title">🔄 자동 모니터링</div>
+            <div class="setting-row">
+                <span>자동 확인</span>
+                <div class="toggle" id="autoToggle" onclick="toggleAuto()"></div>
+            </div>
+            <div class="setting-row">
+                <span>확인 주기</span>
+                <select id="interval">
+                    <option value="5">5분</option>
+                    <option value="10">10분</option>
+                    <option value="30" selected>30분</option>
+                    <option value="60">1시간</option>
+                </select>
+            </div>
+            <div class="setting-row">
+                <span>검색 기간</span>
+                <select id="period">
+                    <option value="1">1일</option>
+                    <option value="3">3일</option>
+                    <option value="7" selected>7일</option>
+                    <option value="30">30일</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="card">
+            <button class="btn btn-danger" onclick="clearAll()">🗑 모든 데이터 삭제</button>
+        </div>
+    </div>
+
+    <script>
+        // 전역 상태
+        let state = {
+            apiKey: localStorage.getItem('api_key') || '',
+            keywords: [],
+            papers: [],
+            syncKey: localStorage.getItem('sync_key') || '',
+            syncPassword: localStorage.getItem('sync_password') || '',
+            autoSync: localStorage.getItem('auto_sync') === 'true',
+            autoMonitor: localStorage.getItem('auto_monitor') === 'true',
+            deviceId: localStorage.getItem('device_id') || generateDeviceId(),
+            deviceName: getDeviceName(),
+            lastSyncTime: null,
+            intervalId: null,
+            syncIntervalId: null
+        };
+
+        // 기기 ID 생성
+        function generateDeviceId() {
+            const id = 'device_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+            localStorage.setItem('device_id', id);
+            return id;
+        }
+
+        // 기기 이름 감지
+        function getDeviceName() {
+            const ua = navigator.userAgent;
+            if (/iPhone/.test(ua)) return 'iPhone';
+            if (/iPad/.test(ua)) return 'iPad';
+            if (/Android/.test(ua)) return 'Android';
+            if (/Mac/.test(ua)) return 'Mac';
+            if (/Windows/.test(ua)) return 'Windows PC';
+            return 'Unknown Device';
+        }
+
+        // 초기화
+        document.addEventListener('DOMContentLoaded', async () => {
+            // LocalStorage에서 로드
+            loadFromLocal();
+            
+            // 동기화 상태 확인
+            if (state.syncKey && state.syncPassword) {
+                await loginSync();
+            }
+            
+            updateUI();
+            
+            if (state.apiKey) {
+                document.getElementById('apiKey').value = state.apiKey;
+            }
+            
+            if (state.autoMonitor) {
+                document.getElementById('autoToggle').classList.add('active');
+                startAutoMonitor();
+            }
+        });
+
+        // LocalStorage에서 로드
+        function loadFromLocal() {
+            state.keywords = JSON.parse(localStorage.getItem('keywords') || '[]');
+            state.papers = JSON.parse(localStorage.getItem('papers') || '[]');
+        }
+
+        // LocalStorage에 저장
+        function saveToLocal() {
+            localStorage.setItem('keywords', JSON.stringify(state.keywords));
+            localStorage.setItem('papers', JSON.stringify(state.papers));
+        }
+
+        // 클라우드 동기화 로그인
+        async function loginSync() {
+            let key = document.getElementById('syncKey')?.value || state.syncKey;
+            let password = document.getElementById('syncPassword')?.value || state.syncPassword;
+            
+            if (!key || !password) {
+                if (!state.syncKey) {
+                    alert('동기화 키와 비밀번호를 입력하세요');
+                    return;
+                }
+                key = state.syncKey;
+                password = state.syncPassword;
+            }
+            
+            if (password.length < 4) {
+                alert('비밀번호는 4자리 이상이어야 합니다');
+                return;
+            }
+            
+            state.syncKey = key;
+            state.syncPassword = password;
+            localStorage.setItem('sync_key', key);
+            localStorage.setItem('sync_password', password);
+            
+            // UI 업데이트
+            document.getElementById('loginForm').style.display = 'none';
+            document.getElementById('syncDashboard').style.display = 'block';
+            document.getElementById('syncEmail').textContent = key;
+            
+            // 자동 동기화 시작
+            if (state.autoSync) {
+                startAutoSync();
+            }
+            
+            // 첫 동기화
+            await pullFromCloud();
+            updateSyncStatus('동기화됨', true);
+        }
+
+        // 동기화 해제
+        function logoutSync() {
+            if (!confirm('동기화를 해제하시겠습니까?')) return;
+            
+            stopAutoSync();
+            state.syncKey = '';
+            state.syncPassword = '';
+            localStorage.removeItem('sync_key');
+            localStorage.removeItem('sync_password');
+            
+            document.getElementById('loginForm').style.display = 'block';
+            document.getElementById('syncDashboard').style.display = 'none';
+            
+            updateSyncStatus('동기화 해제됨', false);
+        }
+
+        // 자동 동기화 토글
+        function toggleAutoSync() {
+            state.autoSync = !state.autoSync;
+            localStorage.setItem('auto_sync', state.autoSync);
+            document.getElementById('autoSyncToggle').classList.toggle('active');
+            
+            if (state.autoSync) {
+                startAutoSync();
+            } else {
+                stopAutoSync();
+            }
+        }
+
+        // 자동 동기화 시작
+        function startAutoSync() {
+            if (state.syncIntervalId) return;
+            state.syncIntervalId = setInterval(async () => {
+                await manualSync();
+            }, 60000); // 1분마다
+        }
+
+        // 자동 동기화 중지
+        function stopAutoSync() {
+            if (state.syncIntervalId) {
+                clearInterval(state.syncIntervalId);
+                state.syncIntervalId = null;
+            }
+        }
+
+        // 수동 동기화
+        async function manualSync() {
+            updateSyncStatus('동기화 중...', true);
+            
+            try {
+                // 클라우드에 업로드
+                await pushToCloud();
+                
+                // 클라우드에서 다운로드
+                await pullFromCloud();
+                
+                updateUI();
+                state.lastSyncTime = new Date().toISOString();
+                updateSyncStatus('동기화 완료', true);
+                
+                document.getElementById('lastSync').textContent = formatTime(state.lastSyncTime);
+                document.getElementById('syncStats').textContent = 
+                    `키워드 ${state.keywords.length}개, 논문 ${state.papers.length}개`;
+                
+            } catch (err) {
+                console.error(err);
+                updateSyncStatus('동기화 실패', false);
+            }
+        }
+
+        // 클라우드에 업로드
+        async function pushToCloud() {
+            const data = {
+                keywords: state.keywords,
+                papers: state.papers,
+                deviceId: state.deviceId,
+                deviceName: state.deviceName,
+                timestamp: new Date().toISOString()
+            };
+            
+            const key = await getStorageKey();
+            localStorage.setItem(key, JSON.stringify(data));
+        }
+
+        // 클라우드에서 다운로드
+        async function pullFromCloud() {
+            const key = await getStorageKey();
+            const dataStr = localStorage.getItem(key);
+            
+            if (dataStr) {
+                const data = JSON.parse(dataStr);
+                
+                // 데이터 병합 (중복 제거)
+                state.keywords = mergeArrays(state.keywords, data.keywords, 'id');
+                state.papers = mergeArrays(state.papers, data.papers, 'pmid');
+                
+                saveToLocal();
+                
+                // 기기 목록 업데이트
+                updateDeviceList(data);
+            }
+        }
+
+        // 배열 병합 (중복 제거)
+        function mergeArrays(local, remote, idField) {
+            const merged = [...local];
+            const ids = new Set(local.map(item => item[idField]));
+            
+            for (const item of remote) {
+                if (!ids.has(item[idField])) {
+                    merged.push(item);
+                    ids.add(item[idField]);
+                }
+            }
+            
+            return merged;
+        }
+
+        // 저장소 키 생성
+        async function getStorageKey() {
+            // 간단한 해시 함수 (실제로는 더 강력한 암호화 필요)
+            const hash = btoa(state.syncKey + state.syncPassword);
+            return `cloud_sync_${hash}`;
+        }
+
+        // 동기화 상태 업데이트
+        function updateSyncStatus(message, success) {
+            const statusEl = document.getElementById('syncStatus');
+            const indicator = statusEl.querySelector('.sync-indicator');
+            const text = statusEl.querySelector('span');
+            
+            text.textContent = message;
+            indicator.style.background = success ? '#4CAF50' : '#f44336';
+        }
+
+        // 기기 목록 업데이트
+        function updateDeviceList(data) {
+            const container = document.getElementById('deviceList');
+            
+            const devices = [
+                {
+                    id: state.deviceId,
+                    name: state.deviceName,
+                    time: new Date().toISOString(),
+                    current: true
+                }
+            ];
+            
+            if (data.deviceId !== state.deviceId) {
+                devices.push({
+                    id: data.deviceId,
+                    name: data.deviceName,
+                    time: data.timestamp,
+                    current: false
+                });
+            }
+            
+            container.innerHTML = devices.map(d => `
+                <div class="device-item">
+                    <div class="device-info">
+                        <div class="device-icon">${getDeviceIcon(d.name)}</div>
+                        <div>
+                            <div class="device-name">
+                                ${d.name} ${d.current ? '(이 기기)' : ''}
+                            </div>
+                            <div class="device-time">
+                                ${formatTime(d.time)}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // 기기 아이콘
+        function getDeviceIcon(name) {
+            if (name.includes('iPhone') || name.includes('Android')) return '📱';
+            if (name.includes('iPad')) return '📱';
+            if (name.includes('Mac')) return '💻';
+            if (name.includes('Windows')) return '🖥️';
+            return '📱';
+        }
+
+        // 탭 전환
+        function switchTab(index) {
+            const tabs = document.querySelectorAll('.tab');
+            const contents = document.querySelectorAll('.tab-content');
+            
+            tabs.forEach((tab, i) => {
+                tab.classList.toggle('active', i === index);
+            });
+            
+            contents.forEach((content, i) => {
+                content.classList.toggle('active', i === index);
+            });
+        }
+
+        // API 키 저장
+        function saveApiKey() {
+            const key = document.getElementById('apiKey').value.trim();
+            if (!key || !key.startsWith('sk-ant-')) {
+                alert('⚠️ 유효한 Anthropic API 키를 입력하세요');
+                return;
+            }
+            state.apiKey = key;
+            localStorage.setItem('api_key', key);
+            document.getElementById('apiStatus').innerHTML = 
+                '<div class="alert alert-success">✓ 저장 완료</div>';
+        }
+
+        // 키워드 추가
+        function addKeyword() {
+            const input = document.getElementById('keywordInput');
+            const keyword = input.value.trim();
+            
+            if (!keyword) {
+                alert('키워드를 입력하세요');
+                return;
+            }
+            
+            if (state.keywords.find(k => k.name === keyword)) {
+                alert('이미 등록된 키워드입니다');
+                return;
+            }
+            
+            state.keywords.push({
+                id: Date.now(),
+                name: keyword,
+                active: true,
+                count: 0
+            });
+            
+            saveToLocal();
+            if (state.syncKey) pushToCloud();
+            input.value = '';
+            updateUI();
+            searchKeyword(state.keywords[state.keywords.length - 1]);
+        }
+
+        // PubMed 검색
+        async function searchKeyword(keyword) {
+            try {
+                const period = document.getElementById('period').value;
+                const url = `https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=pubmed&term=${encodeURIComponent(keyword.name)}&retmax=10&retmode=json&sort=pub_date&reldate=${period}`;
+                
+                const res = await fetch(url);
+                const data = await res.json();
+                
+                if (!data.esearchresult?.idlist?.length) return;
+                
+                const pmids = data.esearchresult.idlist;
+                const fetchUrl = `https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=pubmed&id=${pmids.join(',')}&retmode=xml`;
+                
+                const xmlRes = await fetch(fetchUrl);
+                const xmlText = await xmlRes.text();
+                const parser = new DOMParser();
+                const xml = parser.parseFromString(xmlText, 'text/xml');
+                const articles = xml.getElementsByTagName('PubmedArticle');
+                
+                let newCount = 0;
+                for (let article of articles) {
+                    const paper = parseArticle(article);
+                    paper.keywordId = keyword.id;
+                    paper.keywordName = keyword.name;
+                    paper.isNew = true;
+                    paper.isRead = false;
+                    
+                    if (!state.papers.find(p => p.pmid === paper.pmid)) {
+                        state.papers.unshift(paper);
+                        newCount++;
+                    }
+                }
+                
+                keyword.count = state.papers.filter(p => p.keywordId === keyword.id).length;
+                saveToLocal();
+                if (state.syncKey) pushToCloud();
+                updateUI();
+                
+                if (newCount > 0 && 'Notification' in window && Notification.permission === 'granted') {
+                    new Notification('🔬 새 논문 발견!', {
+                        body: `"${keyword.name}": ${newCount}개`,
+                        vibrate: [200, 100, 200]
+                    });
+                }
+                
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        // XML 파싱
+        function parseArticle(article) {
+            const pmid = article.querySelector('PMID')?.textContent || '';
+            const title = article.querySelector('ArticleTitle')?.textContent || 'No title';
+            
+            const authors = Array.from(article.querySelectorAll('Author')).slice(0, 3).map(a => {
+                const last = a.querySelector('LastName')?.textContent || '';
+                const first = a.querySelector('ForeName')?.textContent || '';
+                return `${last} ${first}`.trim();
+            }).join(', ');
+            
+            const abstract = Array.from(article.querySelectorAll('AbstractText'))
+                .map(a => a.textContent).join(' ') || 'No abstract';
+            
+            const journal = article.querySelector('Title')?.textContent || '';
+            
+            const pubDate = article.querySelector('PubDate');
+            let date = '';
+            if (pubDate) {
+                const year = pubDate.querySelector('Year')?.textContent || '';
+                const month = pubDate.querySelector('Month')?.textContent || '';
+                date = [year, month].filter(d => d).join(' ');
+            }
+            
+            return {
+                pmid,
+                title,
+                authors: authors + (article.querySelectorAll('Author').length > 3 ? ' et al.' : ''),
+                abstract,
+                journal,
+                date,
+                url: `https://pubmed.ncbi.nlm.nih.gov/${pmid}/`,
+                summary: null,
+                foundAt: new Date().toISOString()
+            };
+        }
+
+        // AI 요약
+        async function summarize(pmid) {
+            if (!state.apiKey) {
+                alert('⚠️ 설정에서 API 키를 입력하세요');
+                switchTab(3);
+                return;
+            }
+            
+            const paper = state.papers.find(p => p.pmid === pmid);
+            if (!paper) return;
+            
+            const card = document.querySelector(`[data-pmid="${pmid}"]`);
+            const actions = card.querySelector('.paper-actions');
+            actions.innerHTML = '<div class="loading"><div class="spinner"></div>AI 분석 중...</div>';
+            
+            try {
+                const res = await fetch('https://api.anthropic.com/v1/messages', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'x-api-key': state.apiKey,
+                        'anthropic-version': '2023-06-01'
+                    },
+                    body: JSON.stringify({
+                        model: 'claude-sonnet-4-20250514',
+                        max_tokens: 1500,
+                        messages: [{
+                            role: 'user',
+                            content: `다음 논문을 한국어로 간결하게 요약하세요:\n\n제목: ${paper.title}\n초록: ${paper.abstract}\n\n형식:\n• 목적: (1-2문장)\n• 방법: (1-2문장)\n• 결과: (2-3문장)\n• 의의: (1-2문장)`
+                        }]
+                    })
+                });
+                
+                const data = await res.json();
+                paper.summary = data.content[0].text;
+                saveToLocal();
+                if (state.syncKey) pushToCloud();
+                updateUI();
+                
+            } catch (err) {
+                console.error(err);
+                alert('❌ 요약 실패: ' + err.message);
+                updateUI();
+            }
+        }
+
+        // 전체 새로고침
+        async function refreshAll() {
+            const active = state.keywords.filter(k => k.active);
+            if (!active.length) {
+                alert('활성화된 키워드가 없습니다');
+                return;
+            }
+            
+            for (const keyword of active) {
+                await searchKeyword(keyword);
+                await new Promise(r => setTimeout(r, 1000));
+            }
+        }
+
+        // 키워드 토글
+        function toggleKeyword(id) {
+            const keyword = state.keywords.find(k => k.id === id);
+            if (keyword) {
+                keyword.active = !keyword.active;
+                saveToLocal();
+                if (state.syncKey) pushToCloud();
+                updateUI();
+            }
+        }
+
+        // 키워드 삭제
+        function deleteKeyword(id) {
+            if (!confirm('삭제하시겠습니까?')) return;
+            state.keywords = state.keywords.filter(k => k.id !== id);
+            state.papers = state.papers.filter(p => p.keywordId !== id);
+            saveToLocal();
+            if (state.syncKey) pushToCloud();
+            updateUI();
+        }
+
+        // 논문 읽음 처리
+        function markRead(pmid) {
+            const paper = state.papers.find(p => p.pmid === pmid);
+            if (paper) {
+                paper.isRead = true;
+                paper.isNew = false;
+                saveToLocal();
+                if (state.syncKey) pushToCloud();
+                updateUI();
+            }
+        }
+
+        // 모두 읽음
+        function markAllRead() {
+            state.papers.forEach(p => {
+                p.isRead = true;
+                p.isNew = false;
+            });
+            saveToLocal();
+            if (state.syncKey) pushToCloud();
+            updateUI();
+        }
+
+        // 논문 삭제
+        function deletePaper(pmid) {
+            if (!confirm('삭제하시겠습니까?')) return;
+            state.papers = state.papers.filter(p => p.pmid !== pmid);
+            saveToLocal();
+            if (state.syncKey) pushToCloud();
+            updateUI();
+        }
+
+        // 자동 모니터링
+        function toggleAuto() {
+            state.autoMonitor = !state.autoMonitor;
+            localStorage.setItem('auto_monitor', state.autoMonitor);
+            document.getElementById('autoToggle').classList.toggle('active');
+            
+            if (state.autoMonitor) {
+                startAutoMonitor();
+            } else {
+                stopAutoMonitor();
+            }
+        }
+
+        function startAutoMonitor() {
+            if (state.intervalId) return;
+            const mins = parseInt(document.getElementById('interval').value);
+            state.intervalId = setInterval(refreshAll, mins * 60 * 1000);
+        }
+
+        function stopAutoMonitor() {
+            if (state.intervalId) {
+                clearInterval(state.intervalId);
+                state.intervalId = null;
+            }
+        }
+
+        // 전체 삭제
+        function clearAll() {
+            if (!confirm('⚠️ 모든 데이터를 삭제하시겠습니까?')) return;
+            localStorage.clear();
+            location.reload();
+        }
+
+        // UI 업데이트
+        function updateUI() {
+            updateCounts();
+            renderPapers();
+            renderKeywords();
+        }
+
+        function updateCounts() {
+            const newCount = state.papers.filter(p => p.isNew && !p.isRead).length;
+            document.getElementById('newCount').textContent = newCount;
+            document.getElementById('totalCount').textContent = state.papers.length;
+        }
+
+        function renderPapers() {
+            const container = document.getElementById('papers');
+            
+            if (!state.papers.length) {
+                container.innerHTML = '<div class="empty"><div class="empty-icon">📄</div><p>아직 논문이 없습니다</p></div>';
+                return;
+            }
+            
+            const sorted = [...state.papers].sort((a, b) => new Date(b.foundAt) - new Date(a.foundAt));
+            
+            container.innerHTML = sorted.map(p => `
+                <div class="paper ${p.isNew && !p.isRead ? 'new' : ''}" data-pmid="${p.pmid}">
+                    ${p.isNew && !p.isRead ? '<div class="new-badge">NEW</div>' : ''}
+                    <div class="paper-tag">${p.keywordName}</div>
+                    <div class="paper-title">${p.title}</div>
+                    <div class="paper-actions">
+                        ${!p.summary ? `<button class="btn btn-success btn-small" onclick="summarize('${p.pmid}')">🤖 요약</button>` : ''}
+                        <button class="btn btn-primary btn-small" onclick="window.open('${p.url}')">🔗 보기</button>
+                        ${p.isNew && !p.isRead ? `<button class="btn btn-success btn-small" onclick="markRead('${p.pmid}')">✓ 읽음</button>` : ''}
+                        <button class="btn btn-danger btn-small" onclick="deletePaper('${p.pmid}')">🗑</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function renderKeywords() {
+            const container = document.getElementById('keywords');
+            
+            if (!state.keywords.length) {
+                container.innerHTML = '<div class="empty"><div class="empty-icon">🔍</div><p>키워드를 추가하세요</p></div>';
+                return;
+            }
+            
+            container.innerHTML = state.keywords.map(k => `
+                <div class="keyword-item">
+                    <div class="keyword-header">
+                        <div class="keyword-name">${k.name}</div>
+                        <div class="keyword-actions">
+                            <button class="btn btn-small btn-primary" onclick='searchKeyword(${JSON.stringify(k).replace(/"/g, '&quot;')})'>🔄</button>
+                            <button class="btn btn-small ${k.active ? 'btn-danger' : 'btn-success'}" onclick="toggleKeyword(${k.id})">${k.active ? '⏸' : '▶'}</button>
+                            <button class="btn btn-small btn-danger" onclick="deleteKeyword(${k.id})">🗑</button>
+                        </div>
+                    </div>
+                    <div style="font-size:0.85rem;color:#666;">📄 ${k.count}개 논문</div>
+                </div>
+            `).join('');
+        }
+
+        function formatTime(iso) {
+            if (!iso) return '없음';
+            const date = new Date(iso);
+            const now = new Date();
+            const diff = now - date;
+            const mins = Math.floor(diff / 60000);
+            const hours = Math.floor(diff / 3600000);
+            const days = Math.floor(diff / 86400000);
+            
+            if (mins < 1) return '방금';
+            if (mins < 60) return `${mins}분 전`;
+            if (hours < 24) return `${hours}시간 전`;
+            if (days < 7) return `${days}일 전`;
+            return date.toLocaleDateString('ko-KR');
+        }
+
+        // 알림 권한
+        if ('Notification' in window && Notification.permission === 'default') {
+            Notification.requestPermission();
+        }
+
+        // Enter 키
+        document.getElementById('keywordInput').addEventListener('keypress', e => {
+            if (e.key === 'Enter') addKeyword();
+        });
+    </script>
+</body>
+</html>
