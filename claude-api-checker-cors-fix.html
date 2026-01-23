@@ -1,0 +1,675 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Claude API Key 체크 (CORS 해결)</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            text-align: center;
+            margin-bottom: 20px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .card {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+
+        .card-title {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: #333;
+            margin-bottom: 20px;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 15px;
+            border: none;
+            border-radius: 10px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-bottom: 10px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-success {
+            background: #4CAF50;
+            color: white;
+        }
+
+        .btn:hover {
+            opacity: 0.9;
+            transform: translateY(-2px);
+        }
+
+        .alert {
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+
+        .alert-info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border-left: 4px solid #17a2b8;
+        }
+
+        .alert-warning {
+            background: #fff3e0;
+            color: #e65100;
+            border-left: 4px solid #ff9800;
+        }
+
+        .alert-success {
+            background: #e8f5e9;
+            color: #1b5e20;
+            border-left: 4px solid #4CAF50;
+        }
+
+        .alert-error {
+            background: #ffebee;
+            color: #b71c1c;
+            border-left: 4px solid #f44336;
+        }
+
+        .status-box {
+            padding: 20px;
+            border-radius: 12px;
+            margin-top: 20px;
+            border-left: 5px solid;
+        }
+
+        .status-success {
+            background: #e8f5e9;
+            border-left-color: #4CAF50;
+            color: #1b5e20;
+        }
+
+        .status-error {
+            background: #ffebee;
+            border-left-color: #f44336;
+            color: #b71c1c;
+        }
+
+        .key-display {
+            background: #f5f5f5;
+            padding: 12px;
+            border-radius: 8px;
+            font-family: monospace;
+            word-break: break-all;
+            margin: 10px 0;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .info-item {
+            background: #f5f5f5;
+            padding: 15px;
+            border-radius: 8px;
+        }
+
+        .info-label {
+            font-size: 0.85rem;
+            color: #666;
+            margin-bottom: 5px;
+        }
+
+        .info-value {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .method-box {
+            background: #f9f9f9;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 15px;
+            border-left: 4px solid #667eea;
+        }
+
+        .method-box h4 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .step {
+            padding: 12px;
+            background: white;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            border-left: 3px solid #4CAF50;
+        }
+
+        .copy-box {
+            background: #f5f5f5;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: monospace;
+            font-size: 0.9rem;
+            word-break: break-all;
+            margin: 10px 0;
+            position: relative;
+        }
+
+        .copy-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            padding: 8px 15px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.85rem;
+        }
+
+        .copy-btn:active {
+            background: #5568d3;
+        }
+
+        @media (max-width: 768px) {
+            .info-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔑 Claude API Key 체크</h1>
+            <p>CORS 문제 해결 버전</p>
+        </div>
+
+        <!-- CORS 설명 -->
+        <div class="card">
+            <div class="card-title">⚠️ CORS 오류 발생!</div>
+            
+            <div class="alert alert-warning">
+                <strong>문제 원인</strong>
+                <p style="margin-top: 8px;">
+                    GitHub Pages 같은 정적 사이트에서는 보안상의 이유로 
+                    Claude API를 직접 호출할 수 없습니다. (CORS 정책)
+                </p>
+            </div>
+
+            <div class="alert alert-info">
+                <strong>💡 해결 방법</strong>
+                <p style="margin-top: 8px;">
+                    2가지 방법으로 API 키를 체크할 수 있습니다:
+                </p>
+            </div>
+        </div>
+
+        <!-- 방법 1: 브라우저 콘솔 -->
+        <div class="card">
+            <div class="card-title">방법 1️⃣: 브라우저 콘솔 (가장 빠름)</div>
+            
+            <div class="method-box">
+                <h4>🔍 단계별 실행</h4>
+                
+                <div class="step">
+                    <strong>1단계:</strong> 개발자 도구 열기
+                    <ul style="margin-top: 8px; margin-left: 20px; line-height: 1.8;">
+                        <li>Windows/Linux: <code>F12</code> 또는 <code>Ctrl + Shift + I</code></li>
+                        <li>Mac: <code>Cmd + Option + I</code></li>
+                    </ul>
+                </div>
+
+                <div class="step">
+                    <strong>2단계:</strong> Console 탭 클릭
+                </div>
+
+                <div class="step">
+                    <strong>3단계:</strong> 저장된 API 키 확인
+                    <div class="copy-box">
+localStorage.getItem('api_key')
+                        <button class="copy-btn" onclick="copyCode(this, `localStorage.getItem('api_key')`)">복사</button>
+                    </div>
+                    결과가 <code>null</code>이면 키가 없는 것입니다.
+                </div>
+
+                <div class="step">
+                    <strong>4단계:</strong> API 키 테스트 (아래 코드 복사 → 붙여넣기 → Enter)
+                    <div class="copy-box" style="padding-top: 35px;">
+(async () => {
+  const apiKey = localStorage.getItem('api_key');
+  if (!apiKey) {
+    console.log('❌ API 키가 없습니다. 먼저 설정 탭에서 저장하세요.');
+    return;
+  }
+  
+  console.log('🔍 API 키 테스트 중...');
+  console.log('저장된 키:', apiKey.substring(0, 10) + '...' + apiKey.substring(apiKey.length - 4));
+  
+  const startTime = Date.now();
+  
+  try {
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01'
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 50,
+        messages: [{role: 'user', content: 'API 테스트입니다. "정상 작동"이라고만 답변하세요.'}]
+      })
+    });
+    
+    const endTime = Date.now();
+    const data = await response.json();
+    
+    if (response.ok) {
+      console.log('✅ API 키가 정상 작동합니다!');
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      console.log('📊 상세 정보:');
+      console.log('  • 상태: 정상');
+      console.log('  • 응답 시간:', (endTime - startTime) + 'ms');
+      console.log('  • 모델:', data.model);
+      console.log('  • 입력 토큰:', data.usage.input_tokens);
+      console.log('  • 출력 토큰:', data.usage.output_tokens);
+      console.log('  • 총 토큰:', data.usage.input_tokens + data.usage.output_tokens);
+      console.log('  • API 응답:', data.content[0].text);
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      
+      // Rate Limit 정보
+      const rateLimit = {
+        requests: response.headers.get('anthropic-ratelimit-requests-remaining') + '/' + response.headers.get('anthropic-ratelimit-requests-limit'),
+        tokens: response.headers.get('anthropic-ratelimit-tokens-remaining') + '/' + response.headers.get('anthropic-ratelimit-tokens-limit')
+      };
+      console.log('📈 Rate Limit:');
+      console.log('  • 남은 요청:', rateLimit.requests);
+      console.log('  • 남은 토큰:', rateLimit.tokens);
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      
+    } else {
+      console.log('❌ API 오류:', response.status);
+      console.log('오류 타입:', data.error?.type);
+      console.log('오류 메시지:', data.error?.message);
+      
+      if (data.error?.type === 'authentication_error') {
+        console.log('');
+        console.log('💡 해결 방법:');
+        console.log('1. console.anthropic.com에서 새 API 키 생성');
+        console.log('2. 생성한 키 복사');
+        console.log('3. 앱 설정에서 재입력 후 저장');
+      } else if (response.status === 402) {
+        console.log('');
+        console.log('💡 해결 방법:');
+        console.log('1. console.anthropic.com/settings/billing 접속');
+        console.log('2. Credits 잔액 확인');
+        console.log('3. Buy Credits로 충전');
+      } else if (data.error?.type === 'rate_limit_error') {
+        console.log('');
+        console.log('💡 해결 방법:');
+        console.log('1-2분 대기 후 다시 시도');
+      }
+    }
+    
+  } catch (error) {
+    console.log('❌ 네트워크 오류:', error.message);
+    console.log('');
+    console.log('💡 가능한 원인:');
+    console.log('  • 인터넷 연결 끊김');
+    console.log('  • VPN 문제');
+    console.log('  • 방화벽 차단');
+  }
+})();
+                        <button class="copy-btn" onclick="copyLongCode()">복사</button>
+                    </div>
+                </div>
+
+                <div class="step">
+                    <strong>5단계:</strong> 결과 확인
+                    <ul style="margin-top: 8px; margin-left: 20px; line-height: 1.8;">
+                        <li>✅ "API 키가 정상 작동합니다!" → 성공!</li>
+                        <li>❌ "API 오류" → 키 문제 또는 크레딧 부족</li>
+                        <li>❌ "네트워크 오류" → 인터넷 확인</li>
+                    </ul>
+                </div>
+            </div>
+
+            <button class="btn btn-primary" onclick="showConsoleGuide()">
+                📖 자세한 가이드 보기
+            </button>
+
+            <div id="consoleGuide" style="display: none; margin-top: 20px;">
+                <div class="alert alert-info">
+                    <strong>🖼️ 스크린샷으로 보는 방법</strong>
+                    <ol style="margin-top: 10px; line-height: 1.8;">
+                        <li><strong>F12</strong> 누르면 화면 아래/오른쪽에 패널 열림</li>
+                        <li><strong>Console</strong> 탭 찾아서 클릭</li>
+                        <li>큰 텍스트 입력칸 보임 (> 표시)</li>
+                        <li>위 코드 <strong>복사</strong> 버튼 클릭</li>
+                        <li>Console에 <strong>붙여넣기</strong> (Ctrl+V)</li>
+                        <li><strong>Enter</strong> 누르기</li>
+                        <li>결과 나타남!</li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+
+        <!-- 방법 2: 로컬에서 실행 -->
+        <div class="card">
+            <div class="card-title">방법 2️⃣: 로컬 파일로 실행</div>
+            
+            <div class="alert alert-info">
+                <strong>💡 원리</strong>
+                <p style="margin-top: 8px;">
+                    파일을 컴퓨터에 다운로드해서 직접 열면 CORS 제한이 없습니다.
+                </p>
+            </div>
+
+            <div class="method-box">
+                <h4>📥 단계별 실행</h4>
+                
+                <div class="step">
+                    <strong>1단계:</strong> 이 페이지를 로컬에 저장
+                    <ul style="margin-top: 8px; margin-left: 20px;">
+                        <li>Ctrl+S (페이지 저장)</li>
+                        <li>파일명: api-checker.html</li>
+                        <li>저장 위치: 바탕화면</li>
+                    </ul>
+                </div>
+
+                <div class="step">
+                    <strong>2단계:</strong> 저장한 파일 더블클릭
+                </div>
+
+                <div class="step">
+                    <strong>3단계:</strong> API 키 먼저 입력
+                    <input type="password" id="manualApiKey" placeholder="sk-ant-api03-..." 
+                           style="width: 100%; padding: 10px; margin-top: 10px; border: 2px solid #e0e0e0; border-radius: 6px;">
+                </div>
+
+                <div class="step">
+                    <strong>4단계:</strong> 테스트 실행
+                    <button class="btn btn-success" onclick="testApiLocal()" style="margin-top: 10px;">
+                        ▶️ 로컬 테스트 실행
+                    </button>
+                    <div id="localResult" style="margin-top: 15px;"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 현재 상태 -->
+        <div class="card">
+            <div class="card-title">📍 현재 저장된 API 키</div>
+            
+            <button class="btn btn-primary" onclick="checkSavedKey()">
+                🔍 저장된 키 확인
+            </button>
+
+            <div id="savedKeyResult"></div>
+        </div>
+    </div>
+
+    <script>
+        // 코드 복사
+        function copyCode(btn, code) {
+            navigator.clipboard.writeText(code).then(() => {
+                const originalText = btn.textContent;
+                btn.textContent = '✅ 복사됨!';
+                setTimeout(() => {
+                    btn.textContent = originalText;
+                }, 2000);
+            });
+        }
+
+        // 긴 코드 복사
+        function copyLongCode() {
+            const code = `(async () => {
+  const apiKey = localStorage.getItem('api_key');
+  if (!apiKey) {
+    console.log('❌ API 키가 없습니다. 먼저 설정 탭에서 저장하세요.');
+    return;
+  }
+  
+  console.log('🔍 API 키 테스트 중...');
+  console.log('저장된 키:', apiKey.substring(0, 10) + '...' + apiKey.substring(apiKey.length - 4));
+  
+  const startTime = Date.now();
+  
+  try {
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01'
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 50,
+        messages: [{role: 'user', content: 'API 테스트입니다. "정상 작동"이라고만 답변하세요.'}]
+      })
+    });
+    
+    const endTime = Date.now();
+    const data = await response.json();
+    
+    if (response.ok) {
+      console.log('✅ API 키가 정상 작동합니다!');
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      console.log('📊 상세 정보:');
+      console.log('  • 상태: 정상');
+      console.log('  • 응답 시간:', (endTime - startTime) + 'ms');
+      console.log('  • 모델:', data.model);
+      console.log('  • 입력 토큰:', data.usage.input_tokens);
+      console.log('  • 출력 토큰:', data.usage.output_tokens);
+      console.log('  • 총 토큰:', data.usage.input_tokens + data.usage.output_tokens);
+      console.log('  • API 응답:', data.content[0].text);
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      
+      const rateLimit = {
+        requests: response.headers.get('anthropic-ratelimit-requests-remaining') + '/' + response.headers.get('anthropic-ratelimit-requests-limit'),
+        tokens: response.headers.get('anthropic-ratelimit-tokens-remaining') + '/' + response.headers.get('anthropic-ratelimit-tokens-limit')
+      };
+      console.log('📈 Rate Limit:');
+      console.log('  • 남은 요청:', rateLimit.requests);
+      console.log('  • 남은 토큰:', rateLimit.tokens);
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      
+    } else {
+      console.log('❌ API 오류:', response.status);
+      console.log('오류 타입:', data.error?.type);
+      console.log('오류 메시지:', data.error?.message);
+      
+      if (data.error?.type === 'authentication_error') {
+        console.log('');
+        console.log('💡 해결 방법:');
+        console.log('1. console.anthropic.com에서 새 API 키 생성');
+        console.log('2. 생성한 키 복사');
+        console.log('3. 앱 설정에서 재입력 후 저장');
+      } else if (response.status === 402) {
+        console.log('');
+        console.log('💡 해결 방법:');
+        console.log('1. console.anthropic.com/settings/billing 접속');
+        console.log('2. Credits 잔액 확인');
+        console.log('3. Buy Credits로 충전');
+      } else if (data.error?.type === 'rate_limit_error') {
+        console.log('');
+        console.log('💡 해결 방법:');
+        console.log('1-2분 대기 후 다시 시도');
+      }
+    }
+    
+  } catch (error) {
+    console.log('❌ 네트워크 오류:', error.message);
+    console.log('');
+    console.log('💡 가능한 원인:');
+    console.log('  • 인터넷 연결 끊김');
+    console.log('  • VPN 문제');
+    console.log('  • 방화벽 차단');
+  }
+})();`;
+
+            navigator.clipboard.writeText(code).then(() => {
+                alert('✅ 코드가 복사되었습니다!\n\nF12 → Console 탭 → 붙여넣기 → Enter');
+            });
+        }
+
+        // 콘솔 가이드 토글
+        function showConsoleGuide() {
+            const guide = document.getElementById('consoleGuide');
+            guide.style.display = guide.style.display === 'none' ? 'block' : 'none';
+        }
+
+        // 저장된 키 확인
+        function checkSavedKey() {
+            const resultDiv = document.getElementById('savedKeyResult');
+            const apiKey = localStorage.getItem('api_key');
+
+            if (!apiKey) {
+                resultDiv.innerHTML = `
+                    <div class="status-box status-error">
+                        <strong>❌ 저장된 API 키가 없습니다</strong>
+                        <p style="margin-top: 10px;">
+                            먼저 메인 앱의 ⚙️ 설정 탭에서 API 키를 저장하세요.
+                        </p>
+                    </div>
+                `;
+                return;
+            }
+
+            const masked = apiKey.substring(0, 10) + '...' + apiKey.substring(apiKey.length - 4);
+            
+            resultDiv.innerHTML = `
+                <div class="status-box status-success">
+                    <strong>✅ API 키가 저장되어 있습니다</strong>
+                    <div class="key-display">${masked}</div>
+                    <p style="margin-top: 10px; font-size: 0.9rem; color: #666;">
+                        전체 길이: ${apiKey.length}자<br>
+                        이제 위 방법 1 또는 2로 테스트하세요!
+                    </p>
+                </div>
+            `;
+        }
+
+        // 로컬 테스트
+        async function testApiLocal() {
+            const resultDiv = document.getElementById('localResult');
+            const apiKey = document.getElementById('manualApiKey').value.trim() || localStorage.getItem('api_key');
+
+            if (!apiKey) {
+                resultDiv.innerHTML = `
+                    <div class="alert alert-error">
+                        ❌ API 키를 입력하세요
+                    </div>
+                `;
+                return;
+            }
+
+            resultDiv.innerHTML = `
+                <div class="alert alert-info">
+                    🔍 테스트 중...
+                </div>
+            `;
+
+            try {
+                const startTime = Date.now();
+                const response = await fetch('https://api.anthropic.com/v1/messages', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'x-api-key': apiKey,
+                        'anthropic-version': '2023-06-01'
+                    },
+                    body: JSON.stringify({
+                        model: 'claude-sonnet-4-20250514',
+                        max_tokens: 50,
+                        messages: [{role: 'user', content: 'API 테스트입니다. "정상 작동"이라고만 답변하세요.'}]
+                    })
+                });
+
+                const endTime = Date.now();
+                const data = await response.json();
+
+                if (response.ok) {
+                    resultDiv.innerHTML = `
+                        <div class="status-box status-success">
+                            <strong>✅ API 키가 정상 작동합니다!</strong>
+                            <div class="info-grid" style="margin-top: 15px;">
+                                <div class="info-item">
+                                    <div class="info-label">응답 시간</div>
+                                    <div class="info-value">${endTime - startTime}ms</div>
+                                </div>
+                                <div class="info-item">
+                                    <div class="info-label">토큰 사용</div>
+                                    <div class="info-value">${data.usage.input_tokens + data.usage.output_tokens}</div>
+                                </div>
+                            </div>
+                            <p style="margin-top: 10px; font-size: 0.9rem;">
+                                응답: "${data.content[0].text}"
+                            </p>
+                        </div>
+                    `;
+                } else {
+                    resultDiv.innerHTML = `
+                        <div class="status-box status-error">
+                            <strong>❌ API 오류</strong>
+                            <p style="margin-top: 10px;">
+                                ${data.error?.type}: ${data.error?.message}
+                            </p>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="status-box status-error">
+                        <strong>❌ 네트워크 오류</strong>
+                        <p style="margin-top: 10px;">${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+
+        // 페이지 로드 시
+        document.addEventListener('DOMContentLoaded', () => {
+            checkSavedKey();
+        });
+    </script>
+</body>
+</html>
